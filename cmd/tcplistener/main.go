@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	listenAddress = "127.0.0.1:42069"
+	listenAddress = ":42069"
 )
 
 func main() {
