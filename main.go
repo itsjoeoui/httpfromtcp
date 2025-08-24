@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 const inputFilePath = "messages.txt"
@@ -25,9 +26,14 @@ func main() {
 
 	buffer := make([]byte, 8)
 
+	currentLineContent := ""
 	for {
 		n, err := fd.Read(buffer)
 		if err != nil {
+			if currentLineContent != "" {
+				fmt.Printf("read: %s", currentLineContent)
+			}
+
 			if errors.Is(err, io.EOF) {
 				return
 			}
@@ -36,6 +42,18 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("read: %s\n", string(buffer[:n]))
+		chunks := strings.Split(string(buffer[:n]), "\n")
+
+		seen := false
+		for _, chunk := range chunks {
+			if seen {
+				fmt.Printf("read: %s\n", currentLineContent)
+				currentLineContent = chunk
+			} else {
+				currentLineContent += chunk
+				seen = true
+			}
+		}
+
 	}
 }
