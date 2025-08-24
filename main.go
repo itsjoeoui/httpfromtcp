@@ -24,36 +24,50 @@ func main() {
 		}
 	}()
 
-	buffer := make([]byte, 8)
-
-	currentLineContent := ""
-	for {
-		n, err := fd.Read(buffer)
-		if err != nil {
-			if currentLineContent != "" {
-				fmt.Printf("read: %s", currentLineContent)
-			}
-
-			if errors.Is(err, io.EOF) {
-				return
-			}
-
-			log.Fatalf("failed to read from %s: %s\n", inputFilePath, err)
-			panic(err)
-		}
-
-		chunks := strings.Split(string(buffer[:n]), "\n")
-
-		seen := false
-		for _, chunk := range chunks {
-			if seen {
-				fmt.Printf("read: %s\n", currentLineContent)
-				currentLineContent = chunk
-			} else {
-				currentLineContent += chunk
-				seen = true
-			}
-		}
-
+	linesChan := getLinesChannel(fd)
+	for line := range linesChan {
+		fmt.Printf("read: %s\n", line)
 	}
+}
+
+func getLinesChannel(f io.ReadCloser) <-chan string {
+	lines := make(chan string)
+
+	go func() {
+		defer close(lines)
+
+		buffer := make([]byte, 8)
+
+		currentLineContent := ""
+		for {
+			n, err := f.Read(buffer)
+			if err != nil {
+				if currentLineContent != "" {
+					lines <- currentLineContent
+				}
+
+				if errors.Is(err, io.EOF) {
+					break
+				}
+
+				log.Fatalf("failed to read from %s: %s\n", inputFilePath, err)
+				panic(err)
+			}
+
+			chunks := strings.Split(string(buffer[:n]), "\n")
+
+			seen := false
+			for _, chunk := range chunks {
+				if seen {
+					lines <- currentLineContent
+					currentLineContent = chunk
+				} else {
+					currentLineContent += chunk
+					seen = true
+				}
+			}
+		}
+	}()
+
+	return lines
 }
