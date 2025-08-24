@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// `nc localhost 42069` to establish a connection
 const (
 	listenAddress = ":42069"
 )

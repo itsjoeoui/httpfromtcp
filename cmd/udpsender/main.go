@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+// `nc -u -l 42069` to receive messages
 const sendAddress = "localhost:42069"
 
 func main() {
