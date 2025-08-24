@@ -34,11 +34,22 @@ func main() {
 		}
 		log.Printf("accepted connection from %s\n", conn.RemoteAddr().String())
 
-		linesChan := getLinesChannel(conn)
-		for line := range linesChan {
-			fmt.Printf("read: %s\n", line)
-		}
+		go handleConnection(conn)
+	}
+}
 
+func handleConnection(conn net.Conn) {
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatalf("failed to close connection: %s\n", err.Error())
+			panic(err)
+		}
+		log.Printf("closed connection from %s\n", conn.RemoteAddr().String())
+	}()
+
+	linesChan := getLinesChannel(conn)
+	for line := range linesChan {
+		fmt.Printf("read: %s\n", line)
 	}
 }
 
