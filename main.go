@@ -5,28 +5,39 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
+	"net"
 	"strings"
 )
 
-const inputFilePath = "messages.txt"
+const (
+	listenAddress = "127.0.0.1:42069"
+)
 
 func main() {
-	fd, err := os.Open(inputFilePath)
+	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		log.Fatalf("failed to open %s: %s\n", inputFilePath, err)
+		log.Fatalf("failed to listen on %s: %s\n", listenAddress, err.Error())
 		panic(err)
 	}
 	defer func() {
-		if err := fd.Close(); err != nil {
-			log.Fatalf("failed to close %s: %s\n", inputFilePath, err)
+		if err := listener.Close(); err != nil {
+			log.Fatalf("failed to close listener: %s\n", err.Error())
 			panic(err)
 		}
 	}()
 
-	linesChan := getLinesChannel(fd)
-	for line := range linesChan {
-		fmt.Printf("read: %s\n", line)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatalf("failed to accept connection: %s\n", err.Error())
+		}
+		log.Printf("accepted connection from %s\n", conn.RemoteAddr().String())
+
+		linesChan := getLinesChannel(conn)
+		for line := range linesChan {
+			fmt.Printf("read: %s\n", line)
+		}
+
 	}
 }
 
@@ -50,7 +61,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 					break
 				}
 
-				log.Fatalf("failed to read from %s: %s\n", inputFilePath, err)
+				log.Fatalf("failed to read: %s\n", err.Error())
 				panic(err)
 			}
 
