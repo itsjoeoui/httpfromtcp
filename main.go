@@ -49,12 +49,12 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 
 		buffer := make([]byte, 8)
 
-		currentLineContent := ""
+		var sb strings.Builder
 		for {
 			n, err := f.Read(buffer)
 			if err != nil {
-				if currentLineContent != "" {
-					lines <- currentLineContent
+				if sb.String() == "" {
+					lines <- sb.String()
 				}
 
 				if errors.Is(err, io.EOF) {
@@ -70,10 +70,11 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			seen := false
 			for _, chunk := range chunks {
 				if seen {
-					lines <- currentLineContent
-					currentLineContent = chunk
+					lines <- sb.String()
+					sb.Reset()
+					sb.WriteString(chunk)
 				} else {
-					currentLineContent += chunk
+					sb.WriteString(chunk)
 					seen = true
 				}
 			}
