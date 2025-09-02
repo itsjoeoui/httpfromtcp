@@ -50,5 +50,10 @@ func (h Headers) Get(key string) (string, bool) {
 }
 
 func (h Headers) Set(key, value string) {
-	h[key] = value
+	existingValue, ok := h[key]
+	if ok {
+		h[key] = existingValue + ", " + value
+	} else {
+		h[key] = value
+	}
 }
