@@ -3,7 +3,6 @@ package request
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -53,10 +52,14 @@ func (r *Request) parse(data []byte) (int, error) {
 		r.ParserState = ParserStateDone
 		return length, nil
 	case ParserStateDone:
-		return 0, fmt.Errorf("request already fully parsed")
+		return 0, ErrorRequestAlreadyParsed
 	default:
-		return 0, fmt.Errorf("unknown parser state: %s", r.ParserState)
+		return 0, ErrorUnknownParserState
 	}
+}
+
+func (r *Request) done() bool {
+	return r.ParserState == ParserStateDone
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
@@ -67,7 +70,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buffer := make([]byte, bufferSize)
 	readToIndex := 0
 
-	for request.ParserState != ParserStateDone {
+	for !request.done() {
 		if readToIndex == len(buffer) {
 			newBuffer := make([]byte, len(buffer)*2)
 			copy(newBuffer, buffer)
@@ -113,16 +116,16 @@ func parseRequestLine(req []byte) (*RequestLine, int, error) {
 
 	parts := strings.Split(requestLine, " ")
 	if len(parts) != 3 {
-		return nil, 0, errors.New("invalid request line: incorrect number of parts")
+		return nil, 0, ErrorRequestLineMalformed
 	}
 
 	if !slices.Contains(supportedHTTPMethods, parts[0]) {
-		return nil, 0, errors.New("invalid request line: unsupported HTTP method")
+		return nil, 0, ErrorHTTPMethodNotSupported
 	}
 
 	httpVersion := strings.TrimPrefix(parts[2], "HTTP/")
 	if !slices.Contains(supportedHTTPVersions, httpVersion) {
-		return nil, 0, errors.New("invalid request line: unsupported HTTP version")
+		return nil, 0, ErrorHTTPVersionNotSupported
 	}
 
 	return &RequestLine{
