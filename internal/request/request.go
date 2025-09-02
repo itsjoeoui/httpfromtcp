@@ -23,18 +23,18 @@ type Request struct {
 	ParserState ParserState
 }
 
+type RequestLine struct {
+	HTTPVersion   string
+	RequestTarget string
+	Method        string
+}
+
 type ParserState string
 
 const (
 	ParserStateInitialized ParserState = "Initialized"
 	ParserStateDone        ParserState = "Done"
 )
-
-type RequestLine struct {
-	HTTPVersion   string
-	RequestTarget string
-	Method        string
-}
 
 func (r *Request) parse(data []byte) (int, error) {
 	switch r.ParserState {
