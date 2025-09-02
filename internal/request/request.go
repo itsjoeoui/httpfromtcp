@@ -83,6 +83,9 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 				if bytesRead != 0 {
 					panic("What the hell, I thought if io.EOF is returned, bytesRead should be 0")
 				}
+				if !request.done() {
+					return nil, ErrorIncompleteRequest
+				}
 				request.ParserState = ParserStateDone
 				break
 			}
