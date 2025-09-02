@@ -45,11 +45,12 @@ func NewHeaders() Headers {
 }
 
 func (h Headers) Get(key string) (string, bool) {
-	value, ok := h[key]
+	value, ok := h[strings.ToLower(key)]
 	return value, ok
 }
 
 func (h Headers) Set(key, value string) {
+	key = strings.ToLower(key)
 	existingValue, ok := h[key]
 	if ok {
 		h[key] = existingValue + ", " + value
