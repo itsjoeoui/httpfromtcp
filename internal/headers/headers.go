@@ -1,6 +1,7 @@
 package headers
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -34,10 +35,29 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, ErrorInvalidFieldNameFormat
 	}
 
+	if !isValidToken([]byte(fieldName)) {
+		return 0, false, ErrorInvalidFieldNameToken
+	}
+
 	fieldValue := strings.TrimSpace(fieldLine[colonIndex+1:])
 	h.Set(fieldName, fieldValue)
 
 	return len(fieldLine) + len(crlf), false, nil
+}
+
+var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
+
+func isValidToken(data []byte) bool {
+	for _, token := range data {
+		if (token < 'a' || token > 'z') &&
+			(token < 'A' || token > 'Z') &&
+			(token < '0' || token > '9') &&
+			!slices.Contains(tokenChars, token) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func NewHeaders() Headers {
@@ -51,6 +71,7 @@ func (h Headers) Get(key string) (string, bool) {
 
 func (h Headers) Set(key, value string) {
 	key = strings.ToLower(key)
+
 	existingValue, ok := h[key]
 	if ok {
 		h[key] = existingValue + ", " + value
