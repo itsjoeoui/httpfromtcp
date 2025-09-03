@@ -30,19 +30,19 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, nil
 	}
 
-	fieldName := strings.ToLower(string(splitReq[0]))
+	fieldName := splitReq[0]
 	if unicode.IsSpace(rune(fieldName[len(fieldName)-1])) {
 		return 0, false, ErrorInvalidFieldNameFormat
 	}
 
-	fieldName = strings.TrimSpace(fieldName)
+	fieldName = bytes.TrimSpace(fieldName)
 	if !isValidToken([]byte(fieldName)) {
 		return 0, false, ErrorInvalidFieldNameToken
 	}
 
-	fieldValue := string(bytes.TrimSpace(splitReq[1]))
+	fieldValue := bytes.TrimSpace(splitReq[1])
 
-	h.Set(fieldName, fieldValue)
+	h.Set(string(fieldName), string(fieldValue))
 
 	return crlfIdx + len(crlf), false, nil
 }
