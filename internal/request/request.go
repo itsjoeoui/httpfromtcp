@@ -6,6 +6,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/itsjoeoui/httpfromtcp/internal/headers"
 )
 
 var (
@@ -20,6 +22,7 @@ const (
 
 type Request struct {
 	RequestLine RequestLine
+	Headers     headers.Headers
 	ParserState ParserState
 }
 
@@ -32,13 +35,31 @@ type RequestLine struct {
 type ParserState string
 
 const (
-	ParserStateInitialized ParserState = "Initialized"
+	ParserStateRequestLine ParserState = "RequestLine"
+	ParserStateHeaders     ParserState = "Headers"
 	ParserStateDone        ParserState = "Done"
 )
 
 func (r *Request) parse(data []byte) (int, error) {
+	totalBytesParsed := 0
+
+	for r.ParserState != ParserStateDone {
+		n, err := r.parseSingle(data[totalBytesParsed:])
+		if err != nil {
+			return 0, err
+		}
+		totalBytesParsed += n
+		if n == 0 {
+			break
+		}
+	}
+
+	return totalBytesParsed, nil
+}
+
+func (r *Request) parseSingle(data []byte) (int, error) {
 	switch r.ParserState {
-	case ParserStateInitialized:
+	case ParserStateRequestLine:
 		requestLine, length, err := parseRequestLine(data)
 		if err != nil {
 			return 0, err
@@ -49,8 +70,17 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 
 		r.RequestLine = *requestLine
-		r.ParserState = ParserStateDone
+		r.ParserState = ParserStateHeaders
 		return length, nil
+	case ParserStateHeaders:
+		bytesParsed, done, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			r.ParserState = ParserStateDone
+		}
+		return bytesParsed, nil
 	case ParserStateDone:
 		return 0, ErrorRequestAlreadyParsed
 	default:
@@ -64,7 +94,8 @@ func (r *Request) done() bool {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
-		ParserState: ParserStateInitialized,
+		ParserState: ParserStateRequestLine,
+		Headers:     headers.NewHeaders(),
 	}
 
 	buffer := make([]byte, bufferSize)
@@ -86,7 +117,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 				if !request.done() {
 					return nil, ErrorIncompleteRequest
 				}
-				request.ParserState = ParserStateDone
 				break
 			}
 			return nil, err
