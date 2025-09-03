@@ -59,4 +59,6 @@ func handleConnection(conn net.Conn) {
 	for k, v := range req.Headers {
 		fmt.Printf("- %s: %s\n", k, v)
 	}
+	fmt.Printf("Body:\n")
+	fmt.Printf("%s\n", string(req.Body))
 }
