@@ -2,6 +2,7 @@
 package headers
 
 import (
+	"bytes"
 	"slices"
 	"strings"
 	"unicode"
@@ -12,38 +13,38 @@ type Headers map[string]string
 const crlf = "\r\n"
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-	splitReq := strings.Split(string(data), crlf)
-	if len(splitReq) <= 1 {
+	crlfIdx := bytes.Index(data, []byte(crlf))
+	if crlfIdx == -1 {
+		// We don't have a full line yet
 		return 0, false, nil
 	}
 
-	fieldLine := splitReq[0]
-
-	if fieldLine == "" {
+	// Check if the line is just CRLF indicating the end of headers
+	if crlfIdx == 0 {
 		return len(crlf), true, nil
 	}
 
-	colonIndex := strings.Index(fieldLine, ":")
-	if colonIndex == -1 {
-		return 0, false, ErrorInvalidHeaderFormat
+	// We have at least one full line to process
+	splitReq := bytes.SplitN(data[:crlfIdx], []byte(":"), 2)
+	if len(splitReq) != 2 {
+		return 0, false, nil
 	}
 
-	fieldName := strings.TrimLeftFunc(fieldLine[:colonIndex], func(r rune) bool {
-		return unicode.IsSpace(r)
-	})
-
+	fieldName := strings.ToLower(string(splitReq[0]))
 	if unicode.IsSpace(rune(fieldName[len(fieldName)-1])) {
 		return 0, false, ErrorInvalidFieldNameFormat
 	}
 
+	fieldName = strings.TrimSpace(fieldName)
 	if !isValidToken([]byte(fieldName)) {
 		return 0, false, ErrorInvalidFieldNameToken
 	}
 
-	fieldValue := strings.TrimSpace(fieldLine[colonIndex+1:])
+	fieldValue := string(bytes.TrimSpace(splitReq[1]))
+
 	h.Set(fieldName, fieldValue)
 
-	return len(fieldLine) + len(crlf), false, nil
+	return crlfIdx + len(crlf), false, nil
 }
 
 var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
