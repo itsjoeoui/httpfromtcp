@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/itsjoeoui/httpfromtcp/internal/headers"
@@ -18,11 +19,15 @@ var (
 const (
 	crlf       = "\r\n"
 	bufferSize = 8
+
+	contentLengthHeader = "content-length"
 )
 
 type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
+	Body        []byte
+
 	ParserState ParserState
 }
 
@@ -37,6 +42,7 @@ type ParserState string
 const (
 	ParserStateRequestLine ParserState = "RequestLine"
 	ParserStateHeaders     ParserState = "Headers"
+	ParserStateBody        ParserState = "Body"
 	ParserStateDone        ParserState = "Done"
 )
 
@@ -78,9 +84,32 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, err
 		}
 		if done {
-			r.ParserState = ParserStateDone
+			r.ParserState = ParserStateBody
 		}
 		return bytesParsed, nil
+	case ParserStateBody:
+		contentLengthStr, ok := r.Headers.Get(contentLengthHeader)
+		if !ok {
+			r.ParserState = ParserStateDone
+			return len(data), nil
+		}
+		contentLength, err := strconv.Atoi(contentLengthStr)
+		if err != nil {
+			return 0, ErrorInvalidContentLengthHeader
+		}
+
+		r.Body = append(r.Body, data...)
+
+		if len(r.Body) > contentLength {
+			return 0, ErrorBodyExceedContentLength
+		}
+
+		if len(r.Body) == contentLength {
+			r.ParserState = ParserStateDone
+		}
+
+		return len(data), nil
+
 	case ParserStateDone:
 		return 0, ErrorRequestAlreadyParsed
 	default:
@@ -96,6 +125,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		ParserState: ParserStateRequestLine,
 		Headers:     headers.NewHeaders(),
+		Body:        []byte{},
 	}
 
 	buffer := make([]byte, bufferSize)

@@ -11,4 +11,7 @@ var (
 
 	ErrorHTTPMethodNotSupported  = errors.New("http method not supported")
 	ErrorHTTPVersionNotSupported = errors.New("http version not supported")
+
+	ErrorInvalidContentLengthHeader = errors.New("invalid content-length header")
+	ErrorBodyExceedContentLength    = errors.New("body exceeds content-length")
 )
