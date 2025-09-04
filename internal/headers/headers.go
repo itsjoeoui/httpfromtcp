@@ -10,6 +10,12 @@ import (
 	"github.com/itsjoeoui/httpfromtcp/internal/common"
 )
 
+const (
+	ContentLengthHeader = "content-length"
+	ContentTypeHeader   = "content-type"
+	ConnectionHeader    = "connection"
+)
+
 type Headers map[string]string
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {

@@ -19,8 +19,6 @@ var (
 
 const (
 	bufferSize = 8
-
-	contentLengthHeader = "content-length"
 )
 
 type Request struct {
@@ -88,7 +86,7 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		}
 		return bytesParsed, nil
 	case ParserStateBody:
-		contentLengthStr, ok := r.Headers.Get(contentLengthHeader)
+		contentLengthStr, ok := r.Headers.Get(headers.ContentLengthHeader)
 		if !ok {
 			r.ParserState = ParserStateDone
 			return len(data), nil

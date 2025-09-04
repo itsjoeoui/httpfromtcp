@@ -34,13 +34,13 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 }
 
 func GetDefaultHeaders(contentLength int) headers.Headers {
-	headers := headers.Headers{}
+	h := headers.Headers{}
 
-	headers.Set("Content-Type", "text/plain")
-	headers.Set("Content-Length", fmt.Sprintf("%d", contentLength))
-	headers.Set("Connection", "close")
+	h.Set(headers.ContentTypeHeader, "text/plain")
+	h.Set(headers.ContentLengthHeader, fmt.Sprintf("%d", contentLength))
+	h.Set(headers.ConnectionHeader, "close")
 
-	return headers
+	return h
 }
 
 func WriteHeaders(w io.Writer, headers headers.Headers) error {
