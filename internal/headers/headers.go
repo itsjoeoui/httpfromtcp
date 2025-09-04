@@ -6,14 +6,14 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/itsjoeoui/httpfromtcp/internal/common"
 )
 
 type Headers map[string]string
 
-const crlf = "\r\n"
-
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-	crlfIdx := bytes.Index(data, []byte(crlf))
+	crlfIdx := bytes.Index(data, []byte(common.CRLF))
 	if crlfIdx == -1 {
 		// We don't have a full line yet
 		return 0, false, nil
@@ -21,7 +21,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	// Check if the line is just CRLF indicating the end of headers
 	if crlfIdx == 0 {
-		return len(crlf), true, nil
+		return len(common.CRLF), true, nil
 	}
 
 	// We have at least one full line to process
@@ -44,7 +44,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	h.Set(string(fieldName), string(fieldValue))
 
-	return crlfIdx + len(crlf), false, nil
+	return crlfIdx + len(common.CRLF), false, nil
 }
 
 var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}

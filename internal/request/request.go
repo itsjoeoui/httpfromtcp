@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/itsjoeoui/httpfromtcp/internal/common"
 	"github.com/itsjoeoui/httpfromtcp/internal/headers"
 )
 
@@ -17,7 +18,6 @@ var (
 )
 
 const (
-	crlf       = "\r\n"
 	bufferSize = 8
 
 	contentLengthHeader = "content-length"
@@ -169,7 +169,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func parseRequestLine(req []byte) (*RequestLine, int, error) {
-	splitReq := strings.Split(string(req), crlf)
+	splitReq := strings.Split(string(req), common.CRLF)
 	if len(splitReq) <= 1 {
 		// we do not have a complete request line yet
 		return nil, 0, nil
@@ -195,5 +195,5 @@ func parseRequestLine(req []byte) (*RequestLine, int, error) {
 		HTTPVersion:   httpVersion,
 		RequestTarget: parts[1],
 		Method:        parts[0],
-	}, len(requestLine) + len(crlf), nil
+	}, len(requestLine) + len(common.CRLF), nil
 }
