@@ -85,6 +85,22 @@ func (w *Writer) WriteBody(body []byte) (int, error) {
 	return bytesWritten, nil
 }
 
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	if w.state != WriteStateBody {
+		return 0, ErrorInvalidResponseWriterState
+	}
+
+	return fmt.Fprintf(w.writer, "%x%s%s%s", len(p), common.CRLF, p, common.CRLF)
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	if w.state != WriteStateBody {
+		return 0, ErrorInvalidResponseWriterState
+	}
+
+	return fmt.Fprintf(w.writer, "0%s%s", common.CRLF, common.CRLF)
+}
+
 var statusCodeToReasonPhrase map[StatusCode]string = map[StatusCode]string{
 	StatusCodeOK:                  "OK",
 	StatusCodeBadRequest:          "Bad Request",
