@@ -18,7 +18,13 @@ const (
 )
 
 type Writer struct {
-	Writer io.Writer
+	writer io.Writer
+}
+
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{
+		writer: w,
+	}
 }
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
@@ -27,24 +33,24 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 		reasonPhrase = "" // just leave it blank if unknown
 	}
 
-	_, err := fmt.Fprintf(w.Writer, "HTTP/1.1 %d %s%s", statusCode, reasonPhrase, common.CRLF)
+	_, err := fmt.Fprintf(w.writer, "HTTP/1.1 %d %s%s", statusCode, reasonPhrase, common.CRLF)
 	return err
 }
 
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	for k, v := range headers {
-		_, err := fmt.Fprintf(w.Writer, "%s: %s%s", k, v, common.CRLF)
+		_, err := fmt.Fprintf(w.writer, "%s: %s%s", k, v, common.CRLF)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err := fmt.Fprintf(w.Writer, common.CRLF)
+	_, err := fmt.Fprintf(w.writer, common.CRLF)
 	return err
 }
 
 func (w *Writer) WriteBody(body []byte) (int, error) {
-	bytesWritten, err := fmt.Fprintf(w.Writer, "%s", body)
+	bytesWritten, err := fmt.Fprintf(w.writer, "%s", body)
 	if err != nil {
 		return 0, err
 	}
@@ -58,16 +64,6 @@ var statusCodeToReasonPhrase map[StatusCode]string = map[StatusCode]string{
 	StatusCodeInternalServerError: "Internal Server Error",
 }
 
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
-	reasonPhrase, ok := statusCodeToReasonPhrase[statusCode]
-	if !ok {
-		reasonPhrase = "" // just leave it blank if unknown
-	}
-
-	_, err := fmt.Fprintf(w, "HTTP/1.1 %d %s%s", statusCode, reasonPhrase, common.CRLF)
-	return err
-}
-
 func GetDefaultHeaders(contentLength int) headers.Headers {
 	h := headers.Headers{}
 
@@ -76,16 +72,4 @@ func GetDefaultHeaders(contentLength int) headers.Headers {
 	h.Set(headers.ConnectionHeader, "close")
 
 	return h
-}
-
-func WriteHeaders(w io.Writer, headers headers.Headers) error {
-	for k, v := range headers {
-		_, err := fmt.Fprintf(w, "%s: %s%s", k, v, common.CRLF)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err := fmt.Fprintf(w, common.CRLF)
-	return err
 }

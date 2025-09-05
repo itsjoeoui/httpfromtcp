@@ -3,7 +3,6 @@ package server
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"sync/atomic"
@@ -16,31 +15,6 @@ type Server struct {
 	listener       net.Listener
 	isServerClosed atomic.Bool
 	handler        Handler
-}
-
-type HandlerError struct {
-	StatusCode response.StatusCode
-	Message    string
-}
-
-func (he HandlerError) Write(w io.Writer) {
-	err := response.WriteStatusLine(w, he.StatusCode)
-	if err != nil {
-		log.Printf("Failed to write status line: %v", err)
-	}
-
-	body := []byte(he.Message)
-
-	headers := response.GetDefaultHeaders(len(body))
-	err = response.WriteHeaders(w, headers)
-	if err != nil {
-		log.Printf("Failed to write headers: %v", err)
-	}
-
-	_, err = w.Write(body)
-	if err != nil {
-		log.Printf("Failed to write body: %v", err)
-	}
 }
 
 type Handler func(w *response.Writer, req *request.Request)
@@ -84,18 +58,32 @@ func (s *Server) handle(conn net.Conn) {
 		}
 	}()
 
+	writer := response.NewWriter(conn)
+
 	req, err := request.RequestFromReader(conn)
 	if err != nil {
 		log.Printf("Failed to parse request: %v", err)
-		handlerErr := &HandlerError{
-			StatusCode: response.StatusCodeBadRequest,
-			Message:    err.Error(),
+
+		err := writer.WriteStatusLine(response.StatusCodeBadRequest)
+		if err != nil {
+			log.Printf("Failed to write status line: %v", err)
 		}
-		handlerErr.Write(conn)
+
+		body := []byte(err.Error())
+
+		headers := response.GetDefaultHeaders(len(body))
+		err = writer.WriteHeaders(headers)
+		if err != nil {
+			log.Printf("Failed to write headers: %v", err)
+		}
+
+		_, err = writer.WriteBody(body)
+		if err != nil {
+			log.Printf("Failed to write body: %v", err)
+		}
 		return
 	}
 
-	writer := &response.Writer{Writer: conn}
 	s.handler(writer, req)
 }
 
