@@ -46,10 +46,6 @@ func (he HandlerError) Write(w io.Writer) {
 
 type HandlerFunc func(w io.Writer, r *request.Request) *HandlerError
 
-func WriteError(w io.Writer, err *HandlerError) {
-	fmt.Fprintf(w, "HTTP/1.1 %d %s\r\n", err.StatusCode, err.Message)
-}
-
 func Serve(handler HandlerFunc, port int) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
