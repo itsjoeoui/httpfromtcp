@@ -19,7 +19,7 @@ and they are wired up in `cmd/httpserver/main.go` (all the routes are here!).
 To run it, simply execute:
 
 ```bash
-go run ./cmd/httpserver
+just run
 ```
 
 Then try sending a request to `http://127.0.0.1:42069/`!
