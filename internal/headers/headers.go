@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	ContentLengthHeader = "content-length"
-	ContentTypeHeader   = "content-type"
-	ConnectionHeader    = "connection"
+	ContentLengthHeader    = "content-length"
+	ContentTypeHeader      = "content-type"
+	ConnectionHeader       = "connection"
+	TransferEncodingHeader = "transfer-encoding"
 )
 
 type Headers map[string]string
