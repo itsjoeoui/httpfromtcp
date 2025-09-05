@@ -15,6 +15,9 @@ const (
 	ContentTypeHeader      = "content-type"
 	ConnectionHeader       = "connection"
 	TransferEncodingHeader = "transfer-encoding"
+	TrailerHeader          = "trailer"
+	XContentLengthHeader   = "x-content-length"
+	XContentSHA256         = "x-content-sha256"
 )
 
 type Headers map[string]string

@@ -27,6 +27,7 @@ const (
 	WriteStateStatusLine WriterState = "StatusLine"
 	WriteStateHeaders    WriterState = "Headers"
 	WriteStateBody       WriterState = "Body"
+	WriteStateTrailer    WriterState = "Trailer"
 )
 
 func NewWriter(w io.Writer) *Writer {
@@ -97,8 +98,27 @@ func (w *Writer) WriteChunkedBodyDone() (int, error) {
 	if w.state != WriteStateBody {
 		return 0, ErrorInvalidResponseWriterState
 	}
+	defer func() {
+		w.state = WriteStateTrailer
+	}()
 
-	return fmt.Fprintf(w.writer, "0%s%s", common.CRLF, common.CRLF)
+	return fmt.Fprintf(w.writer, "0%s", common.CRLF)
+}
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.state != WriteStateTrailer {
+		return ErrorInvalidResponseWriterState
+	}
+
+	for k, v := range h {
+		_, err := fmt.Fprintf(w.writer, "%s: %s%s", k, v, common.CRLF)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err := fmt.Fprintf(w.writer, common.CRLF)
+	return err
 }
 
 var statusCodeToReasonPhrase map[StatusCode]string = map[StatusCode]string{
