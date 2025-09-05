@@ -2,20 +2,55 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync/atomic"
 
+	"github.com/itsjoeoui/httpfromtcp/internal/request"
 	"github.com/itsjoeoui/httpfromtcp/internal/response"
 )
 
 type Server struct {
 	listener       net.Listener
 	isServerClosed atomic.Bool
+	handler        HandlerFunc
 }
 
-func Serve(port int) (*Server, error) {
+type HandlerError struct {
+	StatusCode response.StatusCode
+	Message    string
+}
+
+func (he HandlerError) Write(w io.Writer) {
+	err := response.WriteStatusLine(w, he.StatusCode)
+	if err != nil {
+		log.Printf("Failed to write status line: %v", err)
+	}
+
+	body := []byte(he.Message)
+
+	headers := response.GetDefaultHeaders(len(body))
+	err = response.WriteHeaders(w, headers)
+	if err != nil {
+		log.Printf("Failed to write headers: %v", err)
+	}
+
+	_, err = w.Write(body)
+	if err != nil {
+		log.Printf("Failed to write body: %v", err)
+	}
+}
+
+type HandlerFunc func(w io.Writer, r *request.Request) *HandlerError
+
+func WriteError(w io.Writer, err *HandlerError) {
+	fmt.Fprintf(w, "HTTP/1.1 %d %s\r\n", err.StatusCode, err.Message)
+}
+
+func Serve(handler HandlerFunc, port int) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
@@ -23,6 +58,7 @@ func Serve(port int) (*Server, error) {
 
 	server := &Server{
 		listener: listener,
+		handler:  handler,
 	}
 
 	go server.listen()
@@ -53,16 +89,41 @@ func (s *Server) handle(conn net.Conn) {
 		}
 	}()
 
-	err := response.WriteStatusLine(conn, response.StatusCodeOK)
+	req, err := request.RequestFromReader(conn)
+	if err != nil {
+		log.Printf("Failed to parse request: %v", err)
+		handlerErr := &HandlerError{
+			StatusCode: response.StatusCodeBadRequest,
+			Message:    err.Error(),
+		}
+		handlerErr.Write(conn)
+		return
+	}
+
+	buffer := bytes.NewBuffer([]byte{})
+	handlerError := s.handler(buffer, req)
+	if handlerError != nil {
+		handlerError.Write(conn)
+		return
+	}
+
+	err = response.WriteStatusLine(conn, response.StatusCodeOK)
 	if err != nil {
 		log.Printf("Failed to write status line: %v", err)
 		return
 	}
 
-	headers := response.GetDefaultHeaders(0)
+	b := buffer.Bytes()
+	headers := response.GetDefaultHeaders(len(b))
 	err = response.WriteHeaders(conn, headers)
 	if err != nil {
 		log.Printf("Failed to write headers: %v", err)
+		return
+	}
+
+	_, err = conn.Write(b)
+	if err != nil {
+		log.Printf("Failed to write body: %v", err)
 		return
 	}
 }
