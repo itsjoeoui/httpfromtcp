@@ -24,6 +24,25 @@ just run
 
 Then try sending a request to `http://127.0.0.1:42069/`!
 
+More routes are available, such as:
+
+```go
+func handler(w *response.Writer, r *request.Request) {
+  switch {
+  case strings.HasPrefix(r.RequestLine.RequestTarget, "/yourproblem"):
+    handlers.Handler400(w, r)
+  case strings.HasPrefix(r.RequestLine.RequestTarget, "/myproblem"):
+    handlers.Handler500(w, r)
+  case strings.HasPrefix(r.RequestLine.RequestTarget, "/video"):
+    handlers.HandlerVideo(w, r)
+  case strings.HasPrefix(r.RequestLine.RequestTarget, "/httpbin"):
+    handlers.HandlerHTTPBin(w, r)
+  default:
+    handlers.Handler200(w, r)
+  }
+}
+```
+
 ## References
 
 - [RFC 9112 - HTTP/1.1](https://datatracker.ietf.org/doc/html/rfc9112)
