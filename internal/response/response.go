@@ -19,15 +19,31 @@ const (
 
 type Writer struct {
 	writer io.Writer
+	state  WriterState
 }
+type WriterState string
+
+const (
+	WriteStateStatusLine WriterState = "StatusLine"
+	WriteStateHeaders    WriterState = "Headers"
+	WriteStateBody       WriterState = "Body"
+)
 
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{
 		writer: w,
+		state:  WriteStateStatusLine,
 	}
 }
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
+	if w.state != WriteStateStatusLine {
+		return ErrorInvalidResponseWriterState
+	}
+	defer func() {
+		w.state = WriteStateHeaders
+	}()
+
 	reasonPhrase, ok := statusCodeToReasonPhrase[statusCode]
 	if !ok {
 		reasonPhrase = "" // just leave it blank if unknown
@@ -38,6 +54,13 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 }
 
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
+	if w.state != WriteStateHeaders {
+		return ErrorInvalidResponseWriterState
+	}
+	defer func() {
+		w.state = WriteStateBody
+	}()
+
 	for k, v := range headers {
 		_, err := fmt.Fprintf(w.writer, "%s: %s%s", k, v, common.CRLF)
 		if err != nil {
@@ -50,6 +73,10 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 }
 
 func (w *Writer) WriteBody(body []byte) (int, error) {
+	if w.state != WriteStateBody {
+		return 0, ErrorInvalidResponseWriterState
+	}
+
 	bytesWritten, err := fmt.Fprintf(w.writer, "%s", body)
 	if err != nil {
 		return 0, err
