@@ -17,6 +17,41 @@ const (
 	StatusCodeInternalServerError StatusCode = 500
 )
 
+type Writer struct {
+	Writer io.Writer
+}
+
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
+	reasonPhrase, ok := statusCodeToReasonPhrase[statusCode]
+	if !ok {
+		reasonPhrase = "" // just leave it blank if unknown
+	}
+
+	_, err := fmt.Fprintf(w.Writer, "HTTP/1.1 %d %s%s", statusCode, reasonPhrase, common.CRLF)
+	return err
+}
+
+func (w *Writer) WriteHeaders(headers headers.Headers) error {
+	for k, v := range headers {
+		_, err := fmt.Fprintf(w.Writer, "%s: %s%s", k, v, common.CRLF)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err := fmt.Fprintf(w.Writer, common.CRLF)
+	return err
+}
+
+func (w *Writer) WriteBody(body []byte) (int, error) {
+	bytesWritten, err := fmt.Fprintf(w.Writer, "%s", body)
+	if err != nil {
+		return 0, err
+	}
+
+	return bytesWritten, nil
+}
+
 var statusCodeToReasonPhrase map[StatusCode]string = map[StatusCode]string{
 	StatusCodeOK:                  "OK",
 	StatusCodeBadRequest:          "Bad Request",

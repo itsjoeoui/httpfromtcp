@@ -2,7 +2,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +15,7 @@ import (
 type Server struct {
 	listener       net.Listener
 	isServerClosed atomic.Bool
-	handler        HandlerFunc
+	handler        Handler
 }
 
 type HandlerError struct {
@@ -44,9 +43,9 @@ func (he HandlerError) Write(w io.Writer) {
 	}
 }
 
-type HandlerFunc func(w io.Writer, r *request.Request) *HandlerError
+type Handler func(w *response.Writer, req *request.Request)
 
-func Serve(handler HandlerFunc, port int) (*Server, error) {
+func Serve(handler Handler, port int) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
@@ -96,32 +95,8 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 
-	buffer := bytes.NewBuffer([]byte{})
-	handlerError := s.handler(buffer, req)
-	if handlerError != nil {
-		handlerError.Write(conn)
-		return
-	}
-
-	err = response.WriteStatusLine(conn, response.StatusCodeOK)
-	if err != nil {
-		log.Printf("Failed to write status line: %v", err)
-		return
-	}
-
-	b := buffer.Bytes()
-	headers := response.GetDefaultHeaders(len(b))
-	err = response.WriteHeaders(conn, headers)
-	if err != nil {
-		log.Printf("Failed to write headers: %v", err)
-		return
-	}
-
-	_, err = conn.Write(b)
-	if err != nil {
-		log.Printf("Failed to write body: %v", err)
-		return
-	}
+	writer := &response.Writer{Writer: conn}
+	s.handler(writer, req)
 }
 
 func (s *Server) Close() error {

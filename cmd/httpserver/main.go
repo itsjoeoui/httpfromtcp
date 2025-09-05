@@ -1,37 +1,87 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/itsjoeoui/httpfromtcp/internal/headers"
 	"github.com/itsjoeoui/httpfromtcp/internal/request"
+	"github.com/itsjoeoui/httpfromtcp/internal/response"
 	"github.com/itsjoeoui/httpfromtcp/internal/server"
 )
 
 const port = 42069
 
-func handler(w io.Writer, r *request.Request) *server.HandlerError {
+func handler(w *response.Writer, r *request.Request) {
 	switch r.RequestLine.RequestTarget {
 	case "/yourproblem":
-		return &server.HandlerError{
-			StatusCode: 400,
-			Message:    "Your problem is not my problem\n",
+		err := w.WriteStatusLine(400)
+		if err != nil {
+			log.Printf("Failed to write status line: %v", err)
+		}
+
+		f, err := os.ReadFile("./cmd/httpserver/templates/400.html")
+		if err != nil {
+			log.Printf("Failed to read file: %v", err)
+		}
+
+		h := response.GetDefaultHeaders(len(f))
+		h.Override(headers.ContentTypeHeader, "text/html")
+		err = w.WriteHeaders(h)
+		if err != nil {
+			log.Printf("Failed to write headers: %v", err)
+		}
+
+		_, err = w.WriteBody(f)
+		if err != nil {
+			log.Printf("Failed to write body: %v", err)
 		}
 	case "/myproblem":
-		return &server.HandlerError{
-			StatusCode: 500,
-			Message:    "Woopsie, my bad\n",
+		err := w.WriteStatusLine(500)
+		if err != nil {
+			log.Printf("Failed to write status line: %v", err)
+		}
+
+		f, err := os.ReadFile("./cmd/httpserver/templates/500.html")
+		if err != nil {
+			log.Printf("Failed to read file: %v", err)
+		}
+
+		h := response.GetDefaultHeaders(len(f))
+		h.Override(headers.ContentTypeHeader, "text/html")
+		err = w.WriteHeaders(h)
+		if err != nil {
+			log.Printf("Failed to write headers: %v", err)
+		}
+
+		_, err = w.WriteBody(f)
+		if err != nil {
+			log.Printf("Failed to write body: %v", err)
 		}
 	default:
-		_, err := fmt.Fprintf(w, "All good, frfr\n")
+		err := w.WriteStatusLine(200)
 		if err != nil {
-			log.Printf("Failed to write response: %v", err)
+			log.Printf("Failed to write status line: %v", err)
 		}
-		return nil
+
+		f, err := os.ReadFile("./cmd/httpserver/templates/200.html")
+		if err != nil {
+			log.Printf("Failed to read file: %v", err)
+		}
+
+		h := response.GetDefaultHeaders(len(f))
+		h.Override(headers.ContentTypeHeader, "text/html")
+		err = w.WriteHeaders(h)
+		if err != nil {
+			log.Printf("Failed to write headers: %v", err)
+		}
+
+		_, err = w.WriteBody(f)
+		if err != nil {
+			log.Printf("Failed to write body: %v", err)
+		}
 	}
 }
 
