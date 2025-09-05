@@ -4,16 +4,17 @@ A simple HTTP server implementing the HTTP/1.1 spec
 
 ## Setup
 
-Make sure you have [Go](https://go.dev/doc/install) installed.
+Make sure you have [Go](https://go.dev/doc/install) and
+[just](https://github.com/casey/just) installed.
 
-Then, clone the repository and navigate to the project directory:
+Then, run the following command in the project's root folder to set things up:
 
 ```bash
-just setup // https://github.com/casey/just
+just setup
 ```
 
 You can find some example handlers in `cmd/httpserver/handlers`,
-and they are wired up in `cmd/httpserver/main.go`.
+and they are wired up in `cmd/httpserver/main.go` (all the routes are here!).
 
 To run it, simply execute:
 
