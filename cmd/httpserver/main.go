@@ -67,12 +67,38 @@ func handler400(w *response.Writer, _ *request.Request) {
 	}
 }
 
+func handlerVideo(w *response.Writer, _ *request.Request) {
+	err := w.WriteStatusLine(response.StatusCodeOK)
+	if err != nil {
+		log.Printf("Failed to write status line: %v", err)
+	}
+
+	f, err := os.ReadFile("./assets/vim.mp4")
+	if err != nil {
+		log.Printf("Failed to read file: %v, you can download it with 'just setup'", err)
+	}
+
+	h := response.GetDefaultHeaders(len(f))
+	h.Override(headers.ContentTypeHeader, "video/mp4")
+	err = w.WriteHeaders(h)
+	if err != nil {
+		log.Printf("Failed to write headers: %v", err)
+	}
+
+	_, err = w.WriteBody(f)
+	if err != nil {
+		log.Printf("Failed to write body: %v", err)
+	}
+}
+
 func handler(w *response.Writer, r *request.Request) {
 	switch {
 	case strings.HasPrefix(r.RequestLine.RequestTarget, "/yourproblem"):
 		handler400(w, r)
 	case strings.HasPrefix(r.RequestLine.RequestTarget, "/myproblem"):
 		handler500(w, r)
+	case strings.HasPrefix(r.RequestLine.RequestTarget, "/video"):
+		handlerVideo(w, r)
 	case strings.HasPrefix(r.RequestLine.RequestTarget, "/httpbin"):
 		route := strings.TrimPrefix(r.RequestLine.RequestTarget, "/httpbin")
 		resp, err := http.Get(fmt.Sprintf("https://httpbin.org%s", route))
